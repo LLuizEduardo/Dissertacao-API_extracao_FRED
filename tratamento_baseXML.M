@@ -1,0 +1,26 @@
+let
+    Fonte = Folder.Files("C:\Users\username\folder"),
+    #"Arquivos Ocultos Filtrados1" = Table.SelectRows(Fonte, each [Attributes]?[Hidden]? <> true),
+    #"Invocar Função Personalizada1" = Table.AddColumn(#"Arquivos Ocultos Filtrados1", "Transformar Arquivo de base XML", each #"Transformar Arquivo de base XML"([Content])),
+    #"Colunas Renomeadas1" = Table.RenameColumns(#"Invocar Função Personalizada1", {"Name", "Nome da Origem"}),
+    #"Outras Colunas Removidas1" = Table.SelectColumns(#"Colunas Renomeadas1", {"Nome da Origem", "Transformar Arquivo de base XML"}),
+    #"Coluna de Tabela Expandida1" = Table.ExpandTableColumn(#"Outras Colunas Removidas1", "Transformar Arquivo de base XML", Table.ColumnNames(#"Transformar Arquivo de base XML"(#"Arquivo de Amostra"))),
+    #"Tipo Alterado" = Table.TransformColumnTypes(#"Coluna de Tabela Expandida1",{{"Nome da Origem", type text}, {"series", type any}, {"Attribute:realtime_start", type date}, {"Attribute:realtime_end", type date}, {"Attribute:order_by", type text}, {"Attribute:sort_order", type text}, {"Attribute:count", Int64.Type}, {"Attribute:offset", Int64.Type}, {"Attribute:limit", Int64.Type}}),
+    #"series Expandido" = Table.ExpandTableColumn(#"Tipo Alterado", "series", {"Attribute:id", "Attribute:realtime_start", "Attribute:realtime_end", "Attribute:title", "Attribute:observation_start", "Attribute:observation_end", "Attribute:frequency", "Attribute:frequency_short", "Attribute:units", "Attribute:units_short", "Attribute:seasonal_adjustment", "Attribute:seasonal_adjustment_short", "Attribute:last_updated", "Attribute:popularity", "Attribute:group_popularity", "Attribute:notes"}, {"Attribute:id", "Attribute:realtime_start.1", "Attribute:realtime_end.1", "Attribute:title", "Attribute:observation_start", "Attribute:observation_end", "Attribute:frequency", "Attribute:frequency_short", "Attribute:units", "Attribute:units_short", "Attribute:seasonal_adjustment", "Attribute:seasonal_adjustment_short", "Attribute:last_updated", "Attribute:popularity", "Attribute:group_popularity", "Attribute:notes"}),
+    #"Duplicatas Removidas" = Table.Distinct(#"series Expandido", {"Attribute:id"}),
+    #"Linhas Filtradas1" = Table.SelectRows(#"Duplicatas Removidas", each [#"Attribute:id"] <> null and [#"Attribute:id"] <> ""),
+    #"Colunas Removidas" = Table.RemoveColumns(#"Linhas Filtradas1",{"Attribute:realtime_start.1", "Attribute:realtime_end.1", "Attribute:realtime_start", "Attribute:realtime_end", "Attribute:sort_order", "Attribute:order_by", "Attribute:offset", "Attribute:limit"}),
+    #"Primeiros Caracteres Inseridos" = Table.AddColumn(#"Colunas Removidas", "start", each Text.Start([#"Attribute:observation_start"], 4), type text),
+    #"Primeiros Caracteres Inseridos1" = Table.AddColumn(#"Primeiros Caracteres Inseridos", "end", each Text.Start([#"Attribute:observation_end"], 4), type text),
+    #"Tipo Alterado1" = Table.TransformColumnTypes(#"Primeiros Caracteres Inseridos1",{{"start", Int64.Type}, {"end", Int64.Type}}),
+    #"Dividir Coluna por Delimitador" = Table.SplitColumn(#"Tipo Alterado1", "Nome da Origem", Splitter.SplitTextByEachDelimiter({"_"}, QuoteStyle.Csv, false), {"Nome da Origem.1", "Nome da Origem.2"}),
+    #"Tipo Alterado2" = Table.TransformColumnTypes(#"Dividir Coluna por Delimitador",{{"Nome da Origem.1", type text}, {"Nome da Origem.2", type text}}),
+    #"Colunas Renomeadas" = Table.RenameColumns(#"Tipo Alterado2",{{"Nome da Origem.1", "pais"}, {"Nome da Origem.2", "tipo"}}),
+    #"Texto Extraído Antes do Delimitador" = Table.TransformColumns(#"Colunas Renomeadas", {{"tipo", each Text.BeforeDelimiter(_, ".xml"), type text}}),
+    #"Valor Substituído" = Table.ReplaceValue(#"Texto Extraído Antes do Delimitador","nation_","",Replacer.ReplaceText,{"tipo"}),
+    #"Colunas Renomeadas2" = Table.RenameColumns(#"Valor Substituído",{{"Attribute:id", "id"}, {"Attribute:title", "title"}, {"Attribute:observation_start", "observation_start"}, {"Attribute:observation_end", "observation_end"}, {"Attribute:frequency", "frequency"}, {"Attribute:frequency_short", "frequency_short"}, {"Attribute:units", "units"}, {"Attribute:units_short", "units_short"}, {"Attribute:seasonal_adjustment", "seasonal_adjustment"}, {"Attribute:seasonal_adjustment_short", "seasonal_adjustment_short"}, {"Attribute:last_updated", "last_updated"}, {"Attribute:popularity", "popularity"}, {"Attribute:group_popularity", "group_popularity"}, {"Attribute:notes", "notes"}, {"Attribute:count", "count"}}),
+    #"Personalização Adicionada" = Table.AddColumn(#"Colunas Renomeadas2", "period_start", each if [start] >= 2000 then "pos > 2000" else "pre < 2000"),
+    #"Personalização Adicionada1" = Table.AddColumn(#"Personalização Adicionada", "period_end", each if [end] >= 2018 then "pos > 2018" else "pre < 2018"),
+    #"Colunas Reordenadas" = Table.ReorderColumns(#"Personalização Adicionada1",{"pais", "tipo", "id", "title", "start", "end", "period_start", "period_end", "observation_start", "observation_end", "frequency", "frequency_short", "units", "units_short", "seasonal_adjustment", "seasonal_adjustment_short", "last_updated", "popularity", "group_popularity", "notes", "count"})
+in
+    #"Colunas Reordenadas"
