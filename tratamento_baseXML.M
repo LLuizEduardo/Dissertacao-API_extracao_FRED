@@ -1,5 +1,5 @@
 let
-    Fonte = Folder.Files("C:\Users\username\folder"),
+    Fonte = Folder.Files(pasta),
     #"Arquivos Ocultos Filtrados1" = Table.SelectRows(Fonte, each [Attributes]?[Hidden]? <> true),
     #"Invocar Função Personalizada1" = Table.AddColumn(#"Arquivos Ocultos Filtrados1", "Transformar Arquivo de base XML", each #"Transformar Arquivo de base XML"([Content])),
     #"Colunas Renomeadas1" = Table.RenameColumns(#"Invocar Função Personalizada1", {"Name", "Nome da Origem"}),
